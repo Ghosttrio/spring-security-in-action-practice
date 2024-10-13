@@ -1,10 +1,15 @@
 package com.ghosttrio.security.config;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
@@ -12,20 +17,27 @@ import java.util.Arrays;
 @Component
 public class CustomAuthenticationProvider implements AuthenticationProvider {
 
+    @Autowired
+    private UserDetailsService userDetailsService;
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     @Override
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
         String username = authentication.getName();
-        String password = String.valueOf(authentication.getCredentials());
+        String password = authentication.getCredentials().toString();
 
-        if("john".equals(username) && "12345".equals(password)) {
-            return new UsernamePasswordAuthenticationToken(username, password, Arrays.asList());
+        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+
+        if(passwordEncoder.matches(password, userDetails.getPassword())) {
+            return new UsernamePasswordAuthenticationToken(username, password, userDetails.getAuthorities());
         } else {
-            throw new AuthenticationCredentialsNotFoundException("error");
+            throw new BadCredentialsException("wrong");
         }
     }
 
     @Override
     public boolean supports(Class<?> authentication) {
-        return UsernamePasswordAuthenticationToken.class.isAssignableFrom(authentication);
+        return authentication.equals(UsernamePasswordAuthenticationToken.class);
     }
 }
