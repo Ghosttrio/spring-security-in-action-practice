@@ -1,6 +1,7 @@
 package com.ghosttrio.security.config;
 
 import com.ghosttrio.security.filter.RequestValidationFilter;
+import org.aopalliance.intercept.MethodInterceptor;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -21,8 +22,11 @@ import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.provisioning.JdbcUserDetailsManager;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 import org.springframework.security.web.csrf.CsrfToken;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
 
 import javax.sql.DataSource;
+import java.util.List;
 
 @Configuration
 public class ProjectConfig extends WebSecurityConfigurerAdapter {
@@ -67,6 +71,16 @@ public class ProjectConfig extends WebSecurityConfigurerAdapter {
 //            c.csrfTokenRepository(customTokenRepository());
 //            c.ignoringAntMatchers("/hello");
 //        });
+
+        http.cors(c -> {
+            CorsConfigurationSource source = request -> {
+                CorsConfiguration config = new CorsConfiguration();
+                config.setAllowedOrigins(List.of("test.com", "test2.com"));
+                config.setAllowedMethods(List.of("GET", "POST"));
+                return config;
+            };
+            c.configurationSource(source);
+        });
     }
 
     @Override
