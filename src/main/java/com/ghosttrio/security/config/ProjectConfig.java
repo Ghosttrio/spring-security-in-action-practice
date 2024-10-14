@@ -1,13 +1,17 @@
 package com.ghosttrio.security.config;
 
+import com.ghosttrio.security.filter.RequestValidationFilter;
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -15,6 +19,8 @@ import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.provisioning.JdbcUserDetailsManager;
+import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
+import org.springframework.security.web.csrf.CsrfToken;
 
 import javax.sql.DataSource;
 
@@ -26,9 +32,41 @@ public class ProjectConfig extends WebSecurityConfigurerAdapter {
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
+//        http.formLogin();
         http.httpBasic();
+
         http.authorizeRequests()
+                .anyRequest()
+                .hasAuthority("WRITE");
+
+        http.authorizeRequests()
+                .anyRequest()
+                .access("hasAuthority('WRITE')");
+
+        http.authorizeRequests()
+                .mvcMatchers("/hello").hasRole("ADMIN")
+                .mvcMatchers("/test").hasRole("MANAGER")
                 .anyRequest().permitAll();
+
+        http.authorizeRequests()
+                .mvcMatchers(HttpMethod.GET, "/a")
+                .authenticated()
+                .mvcMatchers(HttpMethod.POST, "/a")
+                .permitAll()
+                .anyRequest().denyAll();
+
+        http.addFilterBefore(
+                new RequestValidationFilter(),
+                BasicAuthenticationFilter.class
+        ).authorizeRequests()
+                .anyRequest().permitAll();
+
+        http.csrf(c -> c.ignoringAntMatchers("/hello"));
+
+//        http.csrf(c -> {
+//            c.csrfTokenRepository(customTokenRepository());
+//            c.ignoringAntMatchers("/hello");
+//        });
     }
 
     @Override
@@ -72,4 +110,10 @@ public class ProjectConfig extends WebSecurityConfigurerAdapter {
 //        return userDetailsService;
 //    }
 //
+
+    @Bean
+    public InitializingBean initializingBean() {
+        return () -> SecurityContextHolder.setStrategyName(
+                SecurityContextHolder.MODE_INHERITABLETHREADLOCAL);
+    }
 }
